@@ -1,99 +1,121 @@
 /**
- * Concorrencia por elevadores, ha 3 elevadores e 10 andares
- * cada andar chamará um elevador e será colocado em uma fila
- * o programa deve decidir qual elevador vai até onde foi chamado de forma concorrente
+ * Concorrencia por elevatores, ha 3 elevatores e 10 andares
+ * cada andar chamará um elevator e será colocado em uma fila
+ * o programa deve decidir qual elevator vai até onde foi chamado de forma concorrente
 */
 
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <vector>
 #include <semaphore.h>
 #include <time.h>
 #include <unistd.h>
+#include <queue>
 
-#define N_ELE 2
-#define N_USR 20
-#define ANDARES 10
+#define NUM_ELEVATORS 2
+#define NUM_USERS 10
+#define FLOORS 10
 
 using namespace std;
 
-struct Chamada {
-    int andar;
-    bool subir; // subir/descer
-};
+// global var
+queue<int> callBuffer = {};
 
-vector<Chamada> fila = {};
 
-pthread_mutex_t mut;
-sem_t calls;
+pthread_mutex_t bufMutex;
+pthread_cond_t bufCond;
 
-void* elevador(void* arg);
-void* chamadas(void* arg);
+// threads
+void* elevator(void* arg);
+void* callsHandler(void* arg);
 
 
 int main(){
-    pthread_t ele[N_ELE], usr[N_USR];
+    pthread_t ele[NUM_ELEVATORS], usr[NUM_USERS];
     int *id, err;
 
-    pthread_mutex_init(&mut, NULL);
-    sem_init(&calls, 0, ANDARES);
+    pthread_mutex_init(&bufMutex, NULL);
+    pthread_cond_init(&bufCond, NULL);
 
     id = (int *)malloc(sizeof(int));
 
-    // elevators
-    for (size_t i = 0; i < N_ELE; i++) {
+    // elevators thread creation
+    for (size_t i = 0; i < NUM_ELEVATORS; i++) {
         *id = i;
-        err = pthread_create(&ele[i], NULL, elevador, (void*)id);
+        err = pthread_create(&ele[i], NULL, elevator, (void*)id);
         if(err){
             cout << "Erro ao criar a thread" << i << endl;
             exit(1);
         }
     }
-    // users
-    for (size_t i = 0; i < N_ELE; i++) {
+    // users thread creation
+    for (size_t i = 0; i < NUM_USERS; i++) {
         *id = i;
-        err = pthread_create(&usr[i], NULL, chamadas, (void*)id);
+        err = pthread_create(&usr[i], NULL, callsHandler, (void*)id);
         if(err){
             cout << "Erro ao criar a thread" << i << endl;
             exit(1);
         }
     }
 
+    // init threads
     pthread_join(ele[0], NULL);
     
     return 0;
 }
 
-void* elevador(void* arg){
-    
+void* elevator(void* arg){
+    /**
+     * get calls in buffer
+     * answer calls
+     * movement logic
+    */
     int id = *((int*) arg);
-    while (1) {
-        pthread_mutex_lock(&mut);
-        if(fila.size() > 0){
-            cout << "Elevador " << id << " atendeu o andar" << fila.begin()->andar << endl;
-            fila.erase(fila.begin());
+    int floor;
+    while (true) {
+        pthread_mutex_lock(&bufMutex);
+
+        while (callBuffer.empty()) {// wait
+            cout << "elevador " << id << " esperando" << endl;
+            pthread_cond_wait(&bufCond, &bufMutex);
         }
-        pthread_mutex_unlock(&mut);
+        // get call
+        floor = callBuffer.front();
+        callBuffer.pop();
+        pthread_mutex_unlock(&bufMutex);
+
+        // answer
+        sleep(5);
+        cout << "elevador " << id << " atendeu o andar " << floor << endl;
     }
     pthread_exit(0);
 }
 
-void* chamadas(void* arg){
+void* callsHandler(void* arg){
+    /**
+     * generate a random target floor to go
+     * decide which elevator would traited call
+     * send solicitation to elevator
+    */
     int id = *((int*) arg);
-    int andar;
-    bool chama;
-    Chamada chamada;
-    while (1) {
-        andar = (int)drand48() % ANDARES;
-        chama = (bool) ((int)drand48() % 2);
-        chamada = {andar, chama};
-        sem_wait(&calls);
-        cout << "Chamada " << id << " no andar " << chamada.andar  << " | subir? " << chamada.subir << endl;
-        fila.push_back(chamada);
+    int floor;
+    while (true) {
+        // generate random floors
+        floor = drand48() * FLOORS;
+
+        // call logic
+        pthread_mutex_lock(&bufMutex);
+        cout << "Chamada " << id << " no andar " << floor << endl;
+        callBuffer.push(floor);
+
+        // wakeup elevator
+        pthread_cond_signal(&bufCond);
+
+        pthread_mutex_unlock(&bufMutex);
+
+        // wait be answered
         sleep(5);
-        sem_post(&calls);
     }
     pthread_exit(0);
 }
