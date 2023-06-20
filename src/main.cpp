@@ -4,14 +4,11 @@
  * o programa deve decidir qual elevator vai até onde foi chamado de forma concorrente
 */
 
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <semaphore.h>
-#include <time.h>
 #include <unistd.h>
-#include <queue>
+#include <set>
 
 #define NUM_ELEVATORS 2
 #define NUM_USERS 10
@@ -20,8 +17,8 @@
 using namespace std;
 
 // global var
-queue<int> callBuffer = {};
-
+set<int> callBuffer = {};
+int elevatorPos[NUM_ELEVATORS]; 
 
 pthread_mutex_t bufMutex;
 pthread_cond_t bufCond;
@@ -38,23 +35,27 @@ int main(){
     pthread_mutex_init(&bufMutex, NULL);
     pthread_cond_init(&bufCond, NULL);
 
+    // init elevators position (floor 0)
+    for (size_t i = 0; i < NUM_ELEVATORS; i++)
+        elevatorPos[i] = 0;
+
     id = (int *)malloc(sizeof(int));
 
     // elevators thread creation
-    for (size_t i = 0; i < NUM_ELEVATORS; i++) {
+    for (int i = 0; i < NUM_ELEVATORS; i++) {
         *id = i;
         err = pthread_create(&ele[i], NULL, elevator, (void*)id);
         if(err){
-            cout << "Erro ao criar a thread" << i << endl;
+            printf("Erro ao criar a thread %d\n", i);
             exit(1);
         }
     }
     // users thread creation
-    for (size_t i = 0; i < NUM_USERS; i++) {
+    for (int i = 0; i < NUM_USERS; i++) {
         *id = i;
         err = pthread_create(&usr[i], NULL, callsHandler, (void*)id);
         if(err){
-            cout << "Erro ao criar a thread" << i << endl;
+            printf("Erro ao criar a thread %d\n", i);
             exit(1);
         }
     }
@@ -72,22 +73,33 @@ void* elevator(void* arg){
      * movement logic
     */
     int id = *((int*) arg);
-    int floor;
+    int floor, distance;
+    set<int>::iterator itr;
     while (true) {
         pthread_mutex_lock(&bufMutex);
 
         while (callBuffer.empty()) {// wait
-            cout << "elevador " << id << " esperando" << endl;
+            printf("Elevador %d esperando\n", id);
             pthread_cond_wait(&bufCond, &bufMutex);
         }
-        // get call
-        floor = callBuffer.front();
-        callBuffer.pop();
+        // get closest call
+        int dist;
+        distance = FLOORS+1;// impossible distance
+        for (itr = callBuffer.begin(); itr != callBuffer.end(); itr++) {
+            dist = abs(elevatorPos[id] - *itr);
+            if(dist < distance){
+                floor = *itr;
+                distance = dist;
+            }
+        }
+        // TODO: pass floor by floor checking if there no are calls to it. if yes, answer call too
+        callBuffer.erase(floor);
+        elevatorPos[id] = floor;// update elevator position
         pthread_mutex_unlock(&bufMutex);
 
         // answer
-        sleep(5);
-        cout << "elevador " << id << " atendeu o andar " << floor << endl;
+        sleep(1);
+        printf("Elevador %d atendeu o andar %d\n", id, floor);
     }
     pthread_exit(0);
 }
@@ -101,21 +113,17 @@ void* callsHandler(void* arg){
     int id = *((int*) arg);
     int floor;
     while (true) {
+        sleep(10);
         // generate random floors
         floor = drand48() * FLOORS;
 
         // call logic
         pthread_mutex_lock(&bufMutex);
-        cout << "Chamada " << id << " no andar " << floor << endl;
-        callBuffer.push(floor);
+        printf("Chamada %d no andar %d\n", id, floor);
+        callBuffer.insert(floor);
 
-        // wakeup elevator
-        pthread_cond_signal(&bufCond);
-
+        pthread_cond_signal(&bufCond);// wakeup elevator
         pthread_mutex_unlock(&bufMutex);
-
-        // wait be answered
-        sleep(5);
     }
     pthread_exit(0);
 }
