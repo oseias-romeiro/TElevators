@@ -3,13 +3,13 @@
 ########################################################################
 
 # Compiler settings - Can be customized.
-CC = g++
-CXXFLAGS = -std=c++11 -Wall
+CC = gcc
+CXXFLAGS = -Wall
 LDFLAGS = 
 
 # Makefile settings - Can be customized.
 APPNAME = TElevator
-EXT = .cpp
+EXT = .c
 SRCDIR = src
 OBJDIR = obj
 
