@@ -3,13 +3,13 @@
 ########################################################################
 
 # Compiler settings - Can be customized.
-CC = g++
-CXXFLAGS = -std=c++11 -Wall
+CC = gcc
+CXXFLAGS = -Wall
 LDFLAGS = 
 
 # Makefile settings - Can be customized.
 APPNAME = TElevator
-EXT = .cpp
+EXT = .c
 SRCDIR = src
 OBJDIR = obj
 
@@ -50,7 +50,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
 # Cleans complete project
 .PHONY: clean
 clean:
-	$(RM) $(DELOBJ) $(DEP) $(APPNAME)
+	$(RM) $(DELOBJ) $(DEP)
 
 # Cleans only all files with the extension .d
 .PHONY: cleandep
