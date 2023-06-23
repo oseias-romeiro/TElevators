@@ -13,15 +13,14 @@
 
 #define NUM_ELEVATORS 1
 #define NUM_USERS 5
-#define FLOORS 20
+#define NUM_FLOORS 20
 #define TRUE 1
-#define LIMIT 100
+#define FALSE 1
 
 
-// global var
-int callBuffer[LIMIT], trackBuffer[LIMIT];
-int hdCallBuf = -1, hdTrackBuf = -1;
-int tlCallBuf = -1, tlTrackBuf = -1;
+// global vars
+int callBuffer[NUM_FLOORS], trackBuffer[NUM_FLOORS];
+int countCbuf = 0, countTbuf = -1;
 int elevatorPos[NUM_ELEVATORS]; 
 
 pthread_mutex_t callMutex, trackMutex;
@@ -38,9 +37,9 @@ int main(){
     int *id, err;
 
     // init buffers
-    for (size_t i = 0; i < LIMIT; i++){
-        callBuffer[i] = 0;
-        trackBuffer[i] = 0;
+    for (size_t i = 0; i < NUM_FLOORS; i++){
+        callBuffer[i] = -1;
+        trackBuffer[i] = -1;
     }
     
     // mutex & conds
@@ -88,40 +87,66 @@ void* elevator(void* arg){
      * movement logic
     */
     int id = *((int*) arg);
-    int pos = 0;
-    int floor = 0;
+    int pos = 0, floor = 0;
     while (TRUE) {
         pthread_mutex_lock(&trackMutex);
 
-        while (hdTrackBuf == -1) {// wait
+        while (countTbuf == -1) {// wait
             printf("Elevador %d esperando\n", id);
             pthread_cond_wait(&elevCond, &trackMutex);
         }
-        // get call from queue
-        pos = floor;
-        floor = trackBuffer[hdTrackBuf];
-
-        // pop
-        if(hdTrackBuf != -1){
-            if(hdTrackBuf+1 < LIMIT)
-                hdTrackBuf = trackBuffer[hdTrackBuf+1];
-            else 
-                hdTrackBuf = -1;
-            trackBuffer[hdTrackBuf] = 0;
+        for (int i = 0; i < countTbuf+1; i++) {
+            pos = floor; // origin
+            floor = trackBuffer[i]; // enqueue
+            trackBuffer[i] = -1; // pop
+            printf("Elevador %d, partiu de %d e atendeu o andar %d\n", id, pos, floor);
         }
-
-        // wakeup callers
-        if(hdTrackBuf != -1){
-            if (((tlTrackBuf - hdTrackBuf + 1 + LIMIT) % LIMIT) == FLOORS-1)
-            pthread_cond_broadcast(&callCond);
-        }
-        
-
+        countTbuf = -1;// clean queue
         pthread_mutex_unlock(&trackMutex);
+    }
+    pthread_exit(0);
+}
 
-        // answer
+
+void* callsHandler(void* arg){
+    /**
+     * generate a random target floor to go
+     * decide which elevator would traited call
+     * send solicitation to elevator
+    */
+    int id = *((int*) arg);
+    int floor;
+    while (TRUE) {
         sleep(5);
-        printf("Elevador %d, partiu de %d e atendeu o andar %d\n", id, pos, floor);
+        // generate random floors
+        floor = drand48() * NUM_FLOORS;
+
+        // call logic
+        pthread_mutex_lock(&callMutex);
+        while (countCbuf >= NUM_FLOORS) {// wait
+            printf("Chamada %d esperando no andar %d\n", id, floor);
+            pthread_cond_wait(&callCond, &callMutex);
+        }
+        // unique insert
+        int contains = 0;
+        while (TRUE) {
+            contains = 0;
+            for (int i = 0; i < NUM_FLOORS; i++) {
+                if (callBuffer[i]== -1) break;
+                if (callBuffer[i] == floor) contains = 1;
+            }
+            if (contains) floor = drand48() * NUM_FLOORS;
+            else break;
+        }
+        callBuffer[countCbuf] = floor;
+        printf("Chamada no andar %d\n", floor);
+
+        // wakeup decider
+        if (countCbuf == 1)
+            pthread_cond_signal(&deciCond);
+ 
+        countCbuf++;
+        pthread_mutex_unlock(&callMutex);
     }
     pthread_exit(0);
 }
@@ -135,7 +160,7 @@ void* decider(void* args){
     while (TRUE) {
         pthread_mutex_lock(&callMutex);
         // wait
-        while (callBuffer.empty()) {
+        while (countCbuf == 0) {
             printf("Decisor esperando\n");
             pthread_cond_wait(&deciCond, &callMutex);
         }
@@ -143,12 +168,21 @@ void* decider(void* args){
 
         pthread_mutex_lock(&trackMutex);
 
+        
         // feed track to elevators
-        for (auto &a : calls) {
-            trackBuffer.push(a);
+        for (int i = 0; i < NUM_FLOORS; i++) {
+            if(callBuffer[i] > -1)
+                countTbuf++;
+            trackBuffer[i] = callBuffer[i];
+            // cleaning callBuffer
+            callBuffer[i] = -1;
         }
+        countCbuf = 0;
+        
         // wakeup elevators
-        if(trackBuffer.size() == calls.size()) pthread_cond_broadcast(&elevCond);
+        pthread_cond_broadcast(&elevCond);
+        // wakeup callers
+        pthread_cond_broadcast(&callCond);
 
         pthread_mutex_unlock(&trackMutex);
         pthread_mutex_unlock(&callMutex);
@@ -156,33 +190,3 @@ void* decider(void* args){
     pthread_exit(0);
 }
 
-void* callsHandler(void* arg){
-    /**
-     * generate a random target floor to go
-     * decide which elevator would traited call
-     * send solicitation to elevator
-    */
-    int id = *((int*) arg);
-    int floor;
-    while (TRUE) {
-        sleep(5);
-        // generate random floors
-        floor = drand48() * FLOORS;
-
-        // call logic
-        pthread_mutex_lock(&callMutex);
-        while (callBuffer.size() >= FLOORS) {// wait
-            printf("Chamada %d esperando no andar %d\n", id, floor);
-            pthread_cond_wait(&callCond, &callMutex);
-        }
-        callBuffer.push_back(floor);
-        printf("Chamada no andar %d\n", floor);
-
-        // wakeup elevators
-        if (callBuffer.size() == 1)
-            pthread_cond_signal(&deciCond);
-
-        pthread_mutex_unlock(&callMutex);
-    }
-    pthread_exit(0);
-}
