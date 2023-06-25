@@ -1,10 +1,8 @@
 /**
- * Concorrencia por elevatores, ha 3 elevatores e 10 andares
+ * Concorrencia por elevatores
  * cada andar chamará um elevator e será colocado em uma fila
- * o programa deve decidir qual elevator vai até onde foi chamado de forma concorrente
+ * o programa deve decidir qual elevator vai até onde foi chamado de forma produtiva
 */
-
-// TODO: dividir o código em módulos
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,46 +14,47 @@
 #define NUM_FLOORS 20
 #define TRUE 1
 #define FALSE 0
+#define DOWN 0
+#define UP 1
 
 
-// global vars
+// variaveis globais
 int callBuffer[NUM_FLOORS], trackBuffer[NUM_FLOORS];
 int countCbuf = 0;
-int elevatorPos[NUM_ELEVATORS]; 
+int elevatorPos[NUM_ELEVATORS];
+int directionState = UP;
 
 pthread_mutex_t callMutex, trackMutex;
 pthread_cond_t elevCond, deciCond, callCond;
 
-// threads
 void* elevator(void* arg);
 void* callsHandler(void* arg);
 void* decider(void* arg);
+void SCAN(int arr[], int head, int direction);
 
 
 int main(){
     pthread_t ele[NUM_ELEVATORS], usr[NUM_USERS], deci;
     int *id, err;
 
-    // init buffers
+    // inicia buffers com valores improvaveis
     for (size_t i = 0; i < NUM_FLOORS; i++){
-        callBuffer[i] = -1;
-        trackBuffer[i] = -1;
+        callBuffer[i] = NUM_FLOORS;
+        trackBuffer[i] = NUM_FLOORS;
     }
     
-    // mutex & conds
     pthread_mutex_init(&callMutex, NULL);
     pthread_mutex_init(&trackMutex, NULL);
     pthread_cond_init(&elevCond, NULL);
     pthread_cond_init(&deciCond, NULL);
     pthread_cond_init(&callCond, NULL);
 
-    // init elevators position (floor 0)
+    // inicia elevadores na posição 0
     for (size_t i = 0; i < NUM_ELEVATORS; i++)
         elevatorPos[i] = 0;
 
+    // threads
     id = (int *)malloc(sizeof(int));
-
-    // elevators thread creation
     for (int i = 0; i < NUM_ELEVATORS; i++) {
         *id = i;
         err = pthread_create(&ele[i], NULL, elevator, (void*)id);
@@ -64,7 +63,6 @@ int main(){
             exit(1);
         }
     }
-    // users thread creation
     for (int i = 0; i < NUM_USERS; i++) {
         *id = i;
         err = pthread_create(&usr[i], NULL, callsHandler, (void*)id);
@@ -74,7 +72,7 @@ int main(){
         }
     }
     pthread_create(&deci, NULL, decider, NULL);
-    // init threads
+
     pthread_join(ele[0], NULL);
     
     return 0;
@@ -82,24 +80,24 @@ int main(){
 
 void* elevator(void* arg){
     /**
-     * get calls in buffer
-     * answer calls
-     * movement logic
+     * Caso não haja chamadas no trackBuffer, deve esperar;
+     * Elevador segue o trajeto que o decider colocou no trackBuffer;
+     * Consome o trackBuffer, atendendo a cada solicitação na ordem, como uma fila.
     */
     int id = *((int*) arg);
     int pos = 0, floor = 0;
     while (TRUE) {
         pthread_mutex_lock(&trackMutex);
 
-        while (trackBuffer[0] == -1) {// wait
+        while (trackBuffer[0] == NUM_FLOORS) {// wait
             printf("Elevador %d esperando\n", id);
             pthread_cond_wait(&elevCond, &trackMutex);
         }
         for (int i = 0; i < NUM_FLOORS; i++) {
-            if(trackBuffer[i] == -1) break; // avoid -1 -> -1
+            if(trackBuffer[i] >= NUM_FLOORS-1) break;
             pos = floor; // origin
             floor = trackBuffer[i]; // enqueue
-            trackBuffer[i] = -1; // pop
+            trackBuffer[i] = NUM_FLOORS; // pop
             printf("Elevador %d, partiu de %d e atendeu o andar %d\n", id, pos, floor);
         }
         pthread_mutex_unlock(&trackMutex);
@@ -110,9 +108,10 @@ void* elevator(void* arg){
 
 void* callsHandler(void* arg){
     /**
-     * generate a random target floor to go
-     * decide which elevator would traited call
-     * send solicitation to elevator
+     * Caso o callBuffer esteja cheio, aguarde...
+     * Gera chamadas para andares de forma randomica e armazena em callBuffer;
+     * Garante que a chamada é unica, ou seja, não tem mais de uma chamada por andar (callBuffer segue como se fosse um Set);
+     * Caso seja a primeira chamada, acxorda o decider, que esta esperando por novas chamadas.
     */
     int id = *((int*) arg);
     int floor;
@@ -132,7 +131,7 @@ void* callsHandler(void* arg){
         while (TRUE) {
             contains = FALSE;
             for (int i = 0; i < NUM_FLOORS; i++) {
-                if (callBuffer[i]== -1) break;
+                if (callBuffer[i] == NUM_FLOORS) break;
                 if (callBuffer[i] == floor) contains = TRUE;
             }
             if (contains) floor = drand48() * NUM_FLOORS;
@@ -154,9 +153,9 @@ void* callsHandler(void* arg){
 
 void* decider(void* args){
     /**
-     * take floors from caller buffer
-     * use SCAN algorithm to decide best track
-     * feed track buffer for elevators
+     * Se callBuffer estiver vazio, espera...
+     * Utiliza o algoritmo de SCAN para decidir a rota que deve ser seguida pelo elevador que for atender
+     * Acorda os elevadores e chamadores
     */
     while (TRUE) {
         pthread_mutex_lock(&callMutex);
@@ -165,17 +164,30 @@ void* decider(void* args){
             printf("Decisor esperando\n");
             pthread_cond_wait(&deciCond, &callMutex);
         }
-        // TODO: usar o SCAN para calcular a track
 
         pthread_mutex_lock(&trackMutex);
 
-        
-        // feed track to elevators
+        // SCAN
+        // check witch elevator is closest of first call
+        int elevator_distance = NUM_FLOORS;
+        int closest_elevator = 0;
+        int dist;
+        const int hdCallBuf = callBuffer[0];
+        for (int i = 0; i < NUM_ELEVATORS; i++){
+            dist = abs(hdCallBuf-elevatorPos[i]);
+            if(dist < elevator_distance){
+                elevator_distance = dist;
+                closest_elevator = i;
+            }
+        }
+        SCAN(callBuffer, elevatorPos[closest_elevator], directionState);
+        //SCAN(callBuffer, elevatorPos[0], UP);
+        directionState = !directionState; // swipe direction
+        // cleaning callBuffer
         for (int i = 0; i < NUM_FLOORS; i++) {
-            if(callBuffer[i] == -1) break;
-            trackBuffer[i] = callBuffer[i];
-            // cleaning callBuffer
-            callBuffer[i] = -1;
+            if(callBuffer[i] == NUM_FLOORS) break;
+            // trackBuffer[i] = callBuffer[i]; // copy
+            callBuffer[i] = NUM_FLOORS;
         }
         countCbuf = 0;
 
@@ -190,3 +202,95 @@ void* decider(void* args){
     pthread_exit(0);
 }
 
+void SCAN(int arr[], int head, int direction)
+{
+	int seek_count = 0;
+	int distance, cur_track;
+	int* down = malloc(sizeof(int) * NUM_FLOORS);
+    int* up = malloc(sizeof(int) * NUM_FLOORS);
+    int down_count = 0;
+    int up_count = 0;
+
+	// setup up and down arrays
+	if (direction == DOWN)
+		down[down_count++] = -1;
+	else if (direction == UP)
+		up[up_count++] = NUM_FLOORS;
+
+	for (int i = 0; i < NUM_FLOORS; i++) {
+		if (arr[i] < head)
+			down[down_count++] = arr[i];
+		else if (arr[i] >= head)
+			up[up_count++] = arr[i];
+	}
+
+	// Sorting
+    for (int i = 0; i < down_count - 1; i++) {
+        for (int j = 0; j < down_count - i - 1; j++) {
+            if (down[j] > down[j + 1]) {
+                int temp = down[j];
+                down[j] = down[j + 1];
+                down[j + 1] = temp;
+            }
+        }
+    }
+    for (int i = 0; i < up_count - 1; i++) {
+        for (int j = 0; j < up_count - i - 1; j++) {
+            if (up[j] > up[j + 1]) {
+                int temp = up[j];
+                up[j] = up[j + 1];
+                up[j + 1] = temp;
+            }
+        }
+    }
+
+	// run the while loop two times.
+	// one by one scanning up
+	// and down of the head
+	int run = 2;
+    int c = 0;
+	while (run--) {
+		if (direction == DOWN) {
+			for (int i = down_count - 1; i >= 0; i--) {
+                cur_track = down[i];
+                
+                // Appending current track to seek sequence
+                if(cur_track != -1){
+                    trackBuffer[c] = cur_track;
+                    c++;
+                    //printf("# %d\n", cur_track);
+                }
+
+                // Calculate absolute distance
+                distance = abs(cur_track - head);
+
+                // Increase the total count
+                seek_count += distance;
+
+                // Accessed track is now the new head
+                head = cur_track;
+            }
+			direction = UP;
+		}
+		else if (direction == UP) {
+			for (int i = 0; i < up_count; i++) {
+                cur_track = up[i];
+                // Appending current track to seek sequence
+                if(cur_track != -1){
+                    trackBuffer[c] = cur_track;
+                    c++;
+                    //printf("# %d\n", cur_track);
+                }
+                // Calculate absolute distance
+                distance = abs(cur_track - head);
+
+                // Increase the total count
+                seek_count += distance;
+
+                // Accessed track is now new head
+                head = cur_track;
+            }
+			direction = DOWN;
+		}
+	}
+}

@@ -1,0 +1,119 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define DOWN 0
+#define UP 1
+#define NUM_FLOORS 8
+
+int trackBuffer[NUM_FLOORS];
+
+void SCAN(int arr[], int head, int direction)
+{
+	int seek_count = 0;
+	int distance, cur_track;
+	int* down = malloc(sizeof(int) * NUM_FLOORS);
+    int* up = malloc(sizeof(int) * NUM_FLOORS);
+    int down_count = 0;
+    int up_count = 0;
+
+	// setup up and down arrays
+	if (direction == DOWN)
+		down[down_count++] = -1;
+	else if (direction == UP)
+		up[up_count++] = NUM_FLOORS;
+
+	for (int i = 0; i < NUM_FLOORS-1; i++) {
+		if (arr[i] < head)
+			down[down_count++] = arr[i];
+		else if (arr[i] > head)
+			up[up_count++] = arr[i];
+        else up[up_count++] = arr[i];
+	}
+
+	// Sorting
+    for (int i = 0; i < down_count - 1; i++) {
+        for (int j = 0; j < down_count - i - 1; j++) {
+            if (down[j] > down[j + 1]) {
+                int temp = down[j];
+                down[j] = down[j + 1];
+                down[j + 1] = temp;
+            }
+        }
+    }
+    for (int i = 0; i < up_count - 1; i++) {
+        for (int j = 0; j < up_count - i - 1; j++) {
+            if (up[j] > up[j + 1]) {
+                int temp = up[j];
+                up[j] = up[j + 1];
+                up[j + 1] = temp;
+            }
+        }
+    }
+
+	// run the while loop two times.
+	// one by one scanning up
+	// and down of the head
+	int run = 2;
+    int c = 0;
+	while (run--) {
+		if (direction == DOWN) {
+			for (int i = down_count - 1; i >= 0; i--) {
+                cur_track = down[i];
+                
+                // Appending current track to seek sequence
+                if(cur_track != -1){
+                    trackBuffer[c] = cur_track;
+                    c++;
+                    printf("# %d\n", cur_track);
+                }
+
+                // Calculate absolute distance
+                distance = abs(cur_track - head);
+
+                // Increase the total count
+                seek_count += distance;
+
+                // Accessed track is now the new head
+                head = cur_track;
+            }
+			direction = UP;
+		}
+		else if (direction == UP) {
+			for (int i = 0; i < up_count; i++) {
+                cur_track = up[i];
+                
+                // Appending current track to seek sequence
+                if(cur_track != -1){
+                    trackBuffer[c] = cur_track;
+                    c++;
+                    printf("# %d\n", cur_track);
+                }
+                // Calculate absolute distance
+                distance = abs(cur_track - head);
+
+                // Increase the total count
+                seek_count += distance;
+
+                // Accessed track is now new head
+                head = cur_track;
+            }
+			direction = DOWN;
+		}
+	}
+}
+
+
+// Driver code
+int main()
+{
+    for (int i = 0; i < NUM_FLOORS; i++) {
+        trackBuffer[i] = NUM_FLOORS;
+    }
+	// request array
+	int arr[NUM_FLOORS] = { 0,7,5,4,1,NUM_FLOORS,NUM_FLOORS,NUM_FLOORS };
+	int head = 0;
+
+	SCAN(arr, head, UP);
+
+	return 0;
+}
