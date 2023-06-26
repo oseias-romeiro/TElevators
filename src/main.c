@@ -1,7 +1,7 @@
 /**
  * Concorrencia por elevatores
- * cada andar chamará um elevator e será colocado em uma fila
- * o programa deve decidir qual elevator vai até onde foi chamado de forma produtiva
+ * Cada andar poerá chamar um elevator e será colocado em uma fila
+ * O programa deve decidir qual o melhor trajeto para atender as chamadas de forma mais produtiva
 */
 
 #include <stdio.h>
@@ -30,7 +30,7 @@ pthread_cond_t elevCond, deciCond, callCond;
 void* elevator(void* arg);
 void* callsHandler(void* arg);
 void* decider(void* arg);
-void SCAN(int arr[], int head, int direction);
+void SCAN(int head, int direction);
 
 
 int main(){
@@ -85,7 +85,7 @@ void* elevator(void* arg){
      * Consome o trackBuffer, atendendo a cada solicitação na ordem, como uma fila.
     */
     int id = *((int*) arg);
-    int pos = 0, floor = 0;
+    int floor = 0;
     while (TRUE) {
         pthread_mutex_lock(&trackMutex);
 
@@ -94,11 +94,12 @@ void* elevator(void* arg){
             pthread_cond_wait(&elevCond, &trackMutex);
         }
         for (int i = 0; i < NUM_FLOORS; i++) {
-            if(trackBuffer[i] >= NUM_FLOORS-1) break;
-            pos = floor; // origin
-            floor = trackBuffer[i]; // enqueue
-            trackBuffer[i] = NUM_FLOORS; // pop
-            printf("Elevador %d, partiu de %d e atendeu o andar %d\n", id, pos, floor);
+            if(trackBuffer[i] < NUM_FLOORS){
+                elevatorPos[id] = floor; // origin
+                floor = trackBuffer[i]; // enqueue
+                trackBuffer[i] = NUM_FLOORS; // pop
+                printf("Elevador %d, partiu de %d e atendeu o andar %d\n", id, elevatorPos[id], floor);
+            }
         }
         pthread_mutex_unlock(&trackMutex);
     }
@@ -157,7 +158,9 @@ void* decider(void* args){
      * Utiliza o algoritmo de SCAN para decidir a rota que deve ser seguida pelo elevador que for atender
      * Acorda os elevadores e chamadores
     */
+    int sumElevPos = 0;
     while (TRUE) {
+        sleep(10);
         pthread_mutex_lock(&callMutex);
         // wait
         while (countCbuf == 0) {
@@ -168,20 +171,13 @@ void* decider(void* args){
         pthread_mutex_lock(&trackMutex);
 
         // SCAN
-        // check witch elevator is closest of first call
-        int elevator_distance = NUM_FLOORS;
-        int closest_elevator = 0;
-        int dist;
-        const int hdCallBuf = callBuffer[0];
+
+        // somatorio das posições dos elevadores
         for (int i = 0; i < NUM_ELEVATORS; i++){
-            dist = abs(hdCallBuf-elevatorPos[i]);
-            if(dist < elevator_distance){
-                elevator_distance = dist;
-                closest_elevator = i;
-            }
+            sumElevPos += elevatorPos[i];
         }
-        SCAN(callBuffer, elevatorPos[closest_elevator], directionState);
-        //SCAN(callBuffer, elevatorPos[0], UP);
+        
+        SCAN((sumElevPos/NUM_ELEVATORS), directionState);
         directionState = !directionState; // swipe direction
         // cleaning callBuffer
         for (int i = 0; i < NUM_FLOORS; i++) {
@@ -202,7 +198,7 @@ void* decider(void* args){
     pthread_exit(0);
 }
 
-void SCAN(int arr[], int head, int direction)
+void SCAN(int head, int direction)
 {
 	int seek_count = 0;
 	int distance, cur_track;
@@ -217,11 +213,12 @@ void SCAN(int arr[], int head, int direction)
 	else if (direction == UP)
 		up[up_count++] = NUM_FLOORS;
 
-	for (int i = 0; i < NUM_FLOORS; i++) {
-		if (arr[i] < head)
-			down[down_count++] = arr[i];
-		else if (arr[i] >= head)
-			up[up_count++] = arr[i];
+	for (int i = 0; i < NUM_FLOORS-1; i++) {
+		if (callBuffer[i] < head)
+			down[down_count++] = callBuffer[i];
+		else if (callBuffer[i] > head)
+			up[up_count++] = callBuffer[i];
+        else up[up_count++] = callBuffer[i];
 	}
 
 	// Sorting
@@ -243,7 +240,6 @@ void SCAN(int arr[], int head, int direction)
             }
         }
     }
-
 	// run the while loop two times.
 	// one by one scanning up
 	// and down of the head
@@ -258,7 +254,6 @@ void SCAN(int arr[], int head, int direction)
                 if(cur_track != -1){
                     trackBuffer[c] = cur_track;
                     c++;
-                    //printf("# %d\n", cur_track);
                 }
 
                 // Calculate absolute distance
@@ -275,11 +270,11 @@ void SCAN(int arr[], int head, int direction)
 		else if (direction == UP) {
 			for (int i = 0; i < up_count; i++) {
                 cur_track = up[i];
+                
                 // Appending current track to seek sequence
                 if(cur_track != -1){
                     trackBuffer[c] = cur_track;
                     c++;
-                    //printf("# %d\n", cur_track);
                 }
                 // Calculate absolute distance
                 distance = abs(cur_track - head);
