@@ -9,9 +9,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define NUM_ELEVATORS 2
-#define NUM_USERS 15
-#define NUM_FLOORS 20
+#define NUM_ELEVATORS 2  // numero de elevadores
+#define NUM_USERS     15 // numero de usuários (chamadores)
+#define NUM_FLOORS    20 // quantidade de andares
 #define TRUE 1
 #define FALSE 0
 #define DOWN 0
