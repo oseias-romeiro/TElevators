@@ -1,0 +1,198 @@
+<?xml version="1.0" standalone="no"?>
+<mlt LC_NUMERIC="C" version="7.17.0" title="Shotcut version 23.06.14" producer="main_bin">
+  <profile description="automatic" width="1920" height="1080" progressive="1" sample_aspect_num="1" sample_aspect_den="1" display_aspect_num="16" display_aspect_den="9" frame_rate_num="4" frame_rate_den="1" colorspace="709"/>
+  <playlist id="main_bin">
+    <property name="xml_retain">1</property>
+  </playlist>
+  <producer id="black" in="00:00:00.000" out="00:06:56.750">
+    <property name="length">00:06:57.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">0</property>
+    <property name="aspect_ratio">1</property>
+    <property name="mlt_service">color</property>
+    <property name="mlt_image_format">rgba</property>
+    <property name="set.test_audio">0</property>
+  </producer>
+  <playlist id="background">
+    <entry producer="black" in="00:00:00.000" out="00:06:56.750"/>
+  </playlist>
+  <chain id="chain0" out="00:08:59.000">
+    <property name="length">00:08:59.250</property>
+    <property name="eof">pause</property>
+    <property name="resource">Screencasts/Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">-1</property>
+    <property name="video_index">0</property>
+    <property name="creation_time">2023-06-28T01:20:53</property>
+    <property name="shotcut:caption">Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="shotcut:hash">26cec50c9d9df4defb830ed45a7adf42</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <chain id="chain1" out="00:08:59.000">
+    <property name="length">00:08:59.250</property>
+    <property name="eof">pause</property>
+    <property name="resource">Screencasts/Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">-1</property>
+    <property name="video_index">0</property>
+    <property name="creation_time">2023-06-28T01:20:53</property>
+    <property name="shotcut:caption">Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="shotcut:hash">26cec50c9d9df4defb830ed45a7adf42</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <chain id="chain2" out="00:08:59.000">
+    <property name="length">00:08:59.250</property>
+    <property name="eof">pause</property>
+    <property name="resource">Screencasts/Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">-1</property>
+    <property name="video_index">0</property>
+    <property name="creation_time">2023-06-28T01:20:53</property>
+    <property name="shotcut:caption">Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="shotcut:hash">26cec50c9d9df4defb830ed45a7adf42</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <tractor id="tractor0" in="00:00:00.000" out="00:00:00.000">
+    <property name="shotcut:transition">lumaMix</property>
+    <track producer="chain1" in="00:06:28.500" out="00:06:28.500"/>
+    <track producer="chain2" in="00:06:49.000" out="00:06:49.000"/>
+    <transition id="transition0">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="factory">loader</property>
+      <property name="mlt_service">luma</property>
+      <property name="alpha_over">1</property>
+      <property name="fix_background_alpha">1</property>
+    </transition>
+    <transition id="transition1">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="mlt_service">mix</property>
+      <property name="start">-1</property>
+      <property name="accepts_blanks">1</property>
+    </transition>
+  </tractor>
+  <chain id="chain3" out="00:08:59.000">
+    <property name="length">00:08:59.250</property>
+    <property name="eof">pause</property>
+    <property name="resource">Screencasts/Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">-1</property>
+    <property name="video_index">0</property>
+    <property name="creation_time">2023-06-28T01:20:53</property>
+    <property name="shotcut:caption">Screencast from 2023-06-27 22-20-53.webm</property>
+    <property name="shotcut:hash">26cec50c9d9df4defb830ed45a7adf42</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <playlist id="playlist0">
+    <property name="shotcut:video">1</property>
+    <property name="shotcut:name">V1</property>
+    <entry producer="chain0" in="00:00:00.000" out="00:00:25.250"/>
+    <entry producer="chain1" in="00:01:53.500" out="00:06:28.250"/>
+    <entry producer="tractor0" in="00:00:00.000" out="00:00:00.000"/>
+    <entry producer="chain2" in="00:06:49.250" out="00:07:30.750"/>
+    <entry producer="chain3" in="00:07:31.000" out="00:08:45.250"/>
+  </playlist>
+  <chain id="chain4" out="00:08:49.750">
+    <property name="length">00:08:50.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">/home/oseias/Documents/TElevators/docs/TElevators.m4a</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">0</property>
+    <property name="video_index">-1</property>
+    <property name="creation_time">2023-06-28T01:28:35</property>
+    <property name="shotcut:caption">TElevators.m4a</property>
+    <property name="shotcut:hash">4a058557bd1e6f828745e0c256007646</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <chain id="chain5" out="00:08:49.750">
+    <property name="length">00:08:50.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">/home/oseias/Documents/TElevators/docs/TElevators.m4a</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">0</property>
+    <property name="video_index">-1</property>
+    <property name="creation_time">2023-06-28T01:28:35</property>
+    <property name="shotcut:caption">TElevators.m4a</property>
+    <property name="shotcut:hash">4a058557bd1e6f828745e0c256007646</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <chain id="chain6" out="00:08:49.750">
+    <property name="length">00:08:50.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">/home/oseias/Documents/TElevators/docs/TElevators.m4a</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">0</property>
+    <property name="video_index">-1</property>
+    <property name="creation_time">2023-06-28T01:28:35</property>
+    <property name="shotcut:caption">TElevators.m4a</property>
+    <property name="shotcut:hash">4a058557bd1e6f828745e0c256007646</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <chain id="chain7" out="00:08:49.750">
+    <property name="length">00:08:50.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">/home/oseias/Documents/TElevators/docs/TElevators.m4a</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="audio_index">0</property>
+    <property name="video_index">-1</property>
+    <property name="creation_time">2023-06-28T01:28:35</property>
+    <property name="shotcut:caption">TElevators.m4a</property>
+    <property name="shotcut:hash">4a058557bd1e6f828745e0c256007646</property>
+    <property name="ignore_points">0</property>
+    <property name="xml">was here</property>
+  </chain>
+  <playlist id="playlist1">
+    <property name="shotcut:audio">1</property>
+    <property name="shotcut:name">A1</property>
+    <entry producer="chain4" in="00:00:00.000" out="00:00:25.250"/>
+    <entry producer="chain5" in="00:01:53.750" out="00:06:28.500"/>
+    <entry producer="chain6" in="00:06:49.000" out="00:07:30.750"/>
+    <entry producer="chain7" in="00:07:31.000" out="00:08:45.250"/>
+  </playlist>
+  <tractor id="tractor1" title="Shotcut version 23.06.14" in="00:00:00.000" out="00:06:56.750">
+    <property name="shotcut">1</property>
+    <property name="shotcut:projectAudioChannels">2</property>
+    <property name="shotcut:projectFolder">0</property>
+    <track producer="background"/>
+    <track producer="playlist0"/>
+    <track producer="playlist1" hide="video"/>
+    <transition id="transition2">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+    <transition id="transition3">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="version">0.1</property>
+      <property name="mlt_service">frei0r.cairoblend</property>
+      <property name="threads">0</property>
+      <property name="disable">1</property>
+    </transition>
+    <transition id="transition4">
+      <property name="a_track">0</property>
+      <property name="b_track">2</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+  </tractor>
+</mlt>
