@@ -106,7 +106,6 @@ void* elevator(void* arg){
     pthread_exit(0);
 }
 
-
 void* callsHandler(void* arg){
     /**
      * Caso o callBuffer esteja cheio, aguarde...
@@ -150,7 +149,6 @@ void* callsHandler(void* arg){
     }
     pthread_exit(0);
 }
-
 
 void* decider(void* args){
     /**
